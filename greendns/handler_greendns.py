@@ -50,6 +50,9 @@ class GreenDNSHandler(handler_base.HandlerBase):
         self.local_servers = []
         self.unpoisoned_servers = []
 
+        # Override IP
+        self.override = None
+
     def add_arg(self, parser):
         parser.add_argument("--lds",
                             help="Specify local poisoned dns servers",
@@ -69,6 +72,8 @@ class GreenDNSHandler(handler_base.HandlerBase):
                             help="Specify if rfc1918 ip is local")
         parser.add_argument("--cache", dest="cache", action="store_true",
                             help="Specify if cache is enabled")
+        parser.add_argument("--override", dest="override",
+                            help="override IP address")
 
     def parse_arg(self, parser, remaining_argv):
         myargs = parser.parse_args(remaining_argv)
@@ -78,6 +83,7 @@ class GreenDNSHandler(handler_base.HandlerBase):
         self.cache_enabled = myargs.cache
         self.lds = myargs.lds
         self.rds = myargs.rds
+        self.override = myargs.override
 
     def init(self, io_engine):
         self.cnet = localnet.LocalNet(self.f_localroute,
@@ -238,6 +244,8 @@ class GreenDNSHandler(handler_base.HandlerBase):
         local_ip = ""
         for rr in record.rr:
             if rr.rtype == dnslib.QTYPE.A:
+                if self.override:
+                    rr.rdata = dnslib.A(self.override)
                 str_ip = str(rr.rdata)
                 if self.cnet.is_in_local(str_ip):
                     local_ip = str_ip
