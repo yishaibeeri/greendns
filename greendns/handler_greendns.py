@@ -11,7 +11,7 @@ from greendns import localnet
 from greendns import handler_base
 from greendns import cache
 
-EXEMPT = 'yishaibeeri'
+EXEMPT = 'wix'
 
 class GreenDNSSession(session.Session):
     def __init__(self):
