@@ -11,6 +11,7 @@ from greendns import localnet
 from greendns import handler_base
 from greendns import cache
 
+EXEMPT = 'yishaibeeri'
 
 class GreenDNSSession(session.Session):
     def __init__(self):
@@ -126,6 +127,12 @@ class GreenDNSHandler(handler_base.HandlerBase):
         tid = d.header.id
         self.logger.info("[sid=%d] received request, name=%s, type=%s, id=%d",
                          sess.sid, qname, dnslib.QTYPE.get(qtype), tid)
+
+        if EXEMPT in qname:
+            sess._exempt = True
+        else:
+            sess._exempt = False
+
         if self.cache_enabled:
             resp = self.cache.find((qname, qtype))
             if resp:
@@ -187,7 +194,7 @@ class GreenDNSHandler(handler_base.HandlerBase):
             self.logger.error("[sid=%d] parse response error, err=%s, data=%s",
                               sess.sid, e, data)
             return None
-        str_ip = self.__parse_A(d)
+        str_ip = self.__parse_A(d, exempt=sess._exempt)
         self.logger.info("[sid=%d] %s:%s:%d answered ip=%s", sess.sid, addr[0], addr[1], addr[2], str_ip)
         self.logger.debug("[sid=%d] %s:%s:%d response detail,\n%s", sess.sid, addr[0], addr[1], addr[2], d)
         if self.cnet.is_in_blacklist(str_ip):
@@ -238,13 +245,13 @@ class GreenDNSHandler(handler_base.HandlerBase):
             self.logger.info("[sid=%d] using unpoisoned result", sid)
         return resp
 
-    def __parse_A(self, record):
+    def __parse_A(self, record, exempt=False):
         '''parse a proper A record'''
         str_ip = ""
         local_ip = ""
         for rr in record.rr:
             if rr.rtype == dnslib.QTYPE.A:
-                if self.override:
+                if self.override and not exempt:
                     rr.rdata = dnslib.A(self.override)
                 str_ip = str(rr.rdata)
                 if self.cnet.is_in_local(str_ip):
